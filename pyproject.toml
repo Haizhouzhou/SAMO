@@ -1,0 +1,51 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "samo-copco"
+version = "0.1.0"
+description = "SAMO reader-profile modeling for CopCo reader-level classification."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+  { name = "SAMO contributors" },
+]
+dependencies = [
+  "numpy>=1.24",
+  "pandas>=2.0",
+  "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "build>=1.2",
+  "pytest>=8",
+]
+
+[project.scripts]
+samo-copco = "samo_copco.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/samo_copco"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src",
+  "/scripts",
+  "/configs",
+  "/docs",
+  "/tests",
+  "/examples",
+  "/README.md",
+  "/LICENSE",
+  "/CITATION.cff",
+  "/pyproject.toml",
+  "/PUBLIC_RELEASE_MANIFEST.tsv",
+  "/RELEASE_BUILD_REPORT.md",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

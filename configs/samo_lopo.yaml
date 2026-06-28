@@ -1,0 +1,20 @@
+method: "SAMO"
+evaluation:
+  split: "leave_one_reader_out"
+  reader_disjoint: true
+residualization:
+  outcome: "gaze_log_ms"
+  covariates:
+    - "predictability_score"
+    - "word_length"
+    - "word_position"
+profiles:
+  include:
+    - "gaze_residual_mean"
+    - "gaze_residual_std"
+    - "predictability_residual_slope"
+    - "length_residual_slope"
+    - "gaze_ms_mean"
+model:
+  alpha: 1.0
+  threshold: 0.5

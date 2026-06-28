@@ -1,0 +1,15 @@
+method: "SAMO ablation"
+ablation_sets:
+  residual_profile:
+    - "gaze_residual_mean"
+    - "gaze_residual_std"
+    - "predictability_residual_slope"
+    - "length_residual_slope"
+  aggregate_gaze:
+    - "gaze_ms_mean"
+    - "n_words"
+  predictability_summary:
+    - "predictability_mean"
+    - "predictability_std"
+evaluation:
+  split: "leave_one_reader_out"

@@ -1,0 +1,8 @@
+diagnostics:
+  name: "non-official EyeBench-style diagnostics"
+  official_status: false
+  use_reader_disjoint_splits: true
+  report_participant_rows: false
+outputs:
+  metrics_json: "metrics.json"
+  diagnostic_report: "eyebench_style_nonofficial_report.md"

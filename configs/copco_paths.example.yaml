@@ -1,0 +1,17 @@
+# Example only. Replace these with local files obtained through the appropriate CopCo access route.
+paths:
+  word_features: "PATH_TO_LOCAL_WORD_FEATURES.csv"
+  labels: "PATH_TO_LOCAL_READER_LABELS.csv"
+  output_dir: "PATH_TO_LOCAL_OUTPUT_DIRECTORY"
+columns:
+  reader_id: "reader_id"
+  text_id: "text_id"
+  word_id: "word_id"
+  word: "word"
+  gaze_duration_ms: "gaze_duration_ms"
+  reader_label: "reader_label"
+  predictability_score: "predictability_score"
+validation:
+  require_reader_level_labels: true
+  require_reader_disjoint_evaluation: true
+  forbid_identifier_predictors: true
