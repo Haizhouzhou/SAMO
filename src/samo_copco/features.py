@@ -1,4 +1,4 @@
-"""Feature vocabulary and column selection helpers for SAMO."""
+"""Feature vocabulary, aliases, and predictor selection for SAMO."""
 
 from __future__ import annotations
 
@@ -12,11 +12,16 @@ from .data_contracts import (
     GAZE_LOG,
     GAZE_MS,
     LABEL,
+    LM_STABLE_WORD_ID,
+    PARAGRAPH_ID,
     PREDICTABILITY,
     READER_ID,
+    SENTENCE_ID,
+    SOURCE_WORD_ID,
     SPEECH_ID,
     TARGET,
     TEXT_ID,
+    TRIAL_ID,
     WORD,
     WORD_ID,
     WORD_LENGTH,
@@ -26,7 +31,11 @@ from .data_contracts import (
 CANONICAL_WORD_COLUMNS = (
     READER_ID,
     TEXT_ID,
-    WORD_ID,
+    SPEECH_ID,
+    PARAGRAPH_ID,
+    SENTENCE_ID,
+    SOURCE_WORD_ID,
+    LM_STABLE_WORD_ID,
     WORD,
     WORD_POSITION,
 )
@@ -48,62 +57,84 @@ GAZE_FEATURE_FAMILIES = {
     "binary_or_rate": ("skip_rate",),
 }
 
+LM_EXPOSURE_FEATURES = (
+    "lm_surprisal_exposure_mean",
+    "lm_surprisal_exposure_std",
+    "lm_entropy_exposure_mean",
+    "lm_entropy_exposure_std",
+)
+
 PREDICTABILITY_FEATURES = (
+    "lm_word_surprisal",
+    "lm_word_entropy",
     PREDICTABILITY,
-    "surprisal",
-    "negative_log_probability",
-    "word_frequency_log",
     WORD_LENGTH,
     WORD_POSITION,
 )
 
-PREDICTABILITY_FEATURE_FAMILIES = {
-    "model_predictability": (PREDICTABILITY, "surprisal", "negative_log_probability"),
-    "lexical_context": ("word_frequency_log", WORD_LENGTH, WORD_POSITION),
-}
-
 RESIDUALIZED_PROFILE_FEATURES = (
-    "gaze_residual",
-    "gaze_residual_mean",
-    "gaze_residual_std",
-    "predictability_residual_slope",
-    "length_residual_slope",
-    "gaze_ms_mean",
-    "predictability_mean",
-    "predictability_std",
+    "residual_mean__gaze_duration_ms",
+    "residual_std__gaze_duration_ms",
+    "sensitivity__gaze_duration_ms__surprisal",
+    "sensitivity__gaze_duration_ms__entropy",
+    *LM_EXPOSURE_FEATURES,
     "n_words",
 )
 
+PREDICTABILITY_FEATURE_FAMILIES = {
+    "lm_word_predictability": ("lm_word_surprisal", "lm_word_entropy"),
+    "synthetic_predictability": (PREDICTABILITY,),
+    "lexical_context": (WORD_LENGTH, WORD_POSITION),
+}
+
 RESIDUALIZED_PROFILE_FEATURE_FAMILIES = {
-    "residual_location": ("gaze_residual", "gaze_residual_mean"),
-    "residual_variability": ("gaze_residual_std",),
-    "residual_sensitivity": ("predictability_residual_slope", "length_residual_slope"),
+    "lm_exposure": LM_EXPOSURE_FEATURES,
+    "residual_location": tuple(column for column in RESIDUALIZED_PROFILE_FEATURES if column.startswith("residual_mean__")),
+    "residual_variability": tuple(column for column in RESIDUALIZED_PROFILE_FEATURES if column.startswith("residual_std__")),
+    "lm_sensitivity": tuple(column for column in RESIDUALIZED_PROFILE_FEATURES if column.startswith("sensitivity__")),
     "profile_coverage": ("n_words",),
-    "profile_means": ("gaze_ms_mean", "predictability_mean", "predictability_std"),
 }
 
 COLUMN_ALIASES = {
     "participant": READER_ID,
+    "participantid": READER_ID,
     "participant_id": READER_ID,
     "subject": READER_ID,
     "subject_id": READER_ID,
     "subj": READER_ID,
     "reader": READER_ID,
+    "reader_id": READER_ID,
     "text": TEXT_ID,
     "text_identifier": TEXT_ID,
     "item_text_id": TEXT_ID,
     "speech": SPEECH_ID,
-    "speech_identifier": SPEECH_ID,
+    "speechid": SPEECH_ID,
+    "speech_id": SPEECH_ID,
+    "paragraphid": PARAGRAPH_ID,
+    "paragraph_id": PARAGRAPH_ID,
+    "sentenceid": SENTENCE_ID,
+    "sentence_id": SENTENCE_ID,
+    "wordid": SOURCE_WORD_ID,
+    "source_word_id": SOURCE_WORD_ID,
+    "local_word_id": SOURCE_WORD_ID,
     "word_identifier": WORD_ID,
+    "global_word_id": WORD_ID,
+    "stable_word_id": LM_STABLE_WORD_ID,
+    "lm_stable_word_id": LM_STABLE_WORD_ID,
+    "trialid": TRIAL_ID,
+    "trial_id": TRIAL_ID,
     "orthographic_word": WORD,
     "word_form": WORD,
+    "word": WORD,
     "position": WORD_POSITION,
     "word_index": WORD_POSITION,
+    "word_position": WORD_POSITION,
     "total_reading_time": GAZE_MS,
     "total_reading_time_ms": GAZE_MS,
     "trt": GAZE_MS,
     "gaze_ms": GAZE_MS,
     "gaze_duration": GAZE_MS,
+    "gaze_duration_ms": GAZE_MS,
     "log_gaze_duration_ms": GAZE_LOG,
     "predictability": PREDICTABILITY,
     "probability": PREDICTABILITY,
@@ -111,39 +142,22 @@ COLUMN_ALIASES = {
     "label": LABEL,
     "class_label": LABEL,
     "group_label": LABEL,
+    "reader_label": LABEL,
 }
 
 BLOCKED_PREDICTOR_COLUMNS = FORBIDDEN_PREDICTOR_COLUMNS | {
     "participant",
-    "participant_id",
     "subject",
-    "subject_id",
-    "subj",
-    "reader",
     "reader_group",
-    "direct_reader_id",
-    "text",
-    "text_identifier",
-    "item_text_id",
     "trial",
-    "trial_id",
     "trial_index",
     "item_id",
-    "sentence_id",
-    "paragraph_id",
-    "class_label",
-    "group_label",
     "true_label",
     "predicted_label",
     "predicted_probability",
-    SPEECH_ID,
-    TEXT_ID,
-    WORD_ID,
-    LABEL,
-    TARGET,
 }
 
-DEFAULT_REQUIRED_COLUMNS = (READER_ID, TEXT_ID, WORD_ID, WORD, GAZE_MS)
+DEFAULT_REQUIRED_COLUMNS = (WORD, GAZE_MS)
 
 
 def _ordered_present(columns: Iterable[str], candidates: Iterable[str]) -> list[str]:
@@ -152,10 +166,10 @@ def _ordered_present(columns: Iterable[str], candidates: Iterable[str]) -> list[
 
 
 def normalize_feature_columns(frame: pd.DataFrame) -> pd.DataFrame:
-    """Return a copy with accepted public aliases renamed to canonical names."""
+    """Return a copy with accepted public and CopCo aliases renamed."""
 
     rename: dict[str, str] = {}
-    existing = set(frame.columns)
+    existing = set(map(str, frame.columns))
     lowered = {str(column).lower(): str(column) for column in frame.columns}
     for alias, canonical in COLUMN_ALIASES.items():
         source = lowered.get(alias.lower())
@@ -169,7 +183,7 @@ def normalize_feature_columns(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def validate_feature_columns(frame: pd.DataFrame, required: Iterable[str] | None = None) -> None:
-    """Validate that required public feature columns exist and are usable."""
+    """Validate required public feature columns and numeric values."""
 
     normalized = normalize_feature_columns(frame)
     required_columns = tuple(required) if required is not None else DEFAULT_REQUIRED_COLUMNS
@@ -187,8 +201,6 @@ def validate_feature_columns(frame: pd.DataFrame, required: Iterable[str] | None
 
 
 def infer_available_gaze_features(frame: pd.DataFrame) -> list[str]:
-    """Return canonical gaze features present in a table, preserving public order."""
-
     normalized = normalize_feature_columns(frame)
     return _ordered_present(normalized.columns, CANONICAL_GAZE_FEATURES)
 
@@ -208,7 +220,7 @@ def select_model_feature_columns(
     include_predictability: bool = True,
     include_residual: bool = True,
 ) -> list[str]:
-    """Select numeric public predictor columns while excluding IDs and targets."""
+    """Select numeric public predictors while excluding IDs and targets."""
 
     normalized = normalize_feature_columns(frame)
     blocked = set(BLOCKED_PREDICTOR_COLUMNS)
@@ -225,10 +237,7 @@ def select_model_feature_columns(
 
 def _available_by_family(frame: pd.DataFrame, families: dict[str, tuple[str, ...]]) -> dict[str, list[str]]:
     normalized = normalize_feature_columns(frame)
-    return {
-        family: _ordered_present(normalized.columns, columns)
-        for family, columns in families.items()
-    }
+    return {family: _ordered_present(normalized.columns, columns) for family, columns in families.items()}
 
 
 def summarize_feature_availability(frame: pd.DataFrame) -> dict[str, Any]:

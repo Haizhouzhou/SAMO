@@ -3,18 +3,23 @@ evaluation:
   split: "leave_one_reader_out"
   reader_disjoint: true
 residualization:
-  outcome: "gaze_log_ms"
+  gaze_columns:
+    - "gaze_log_ms"
   covariates:
-    - "predictability_score"
+    - "lm_word_surprisal"
+    - "lm_word_entropy"
     - "word_length"
     - "word_position"
 profiles:
   include:
-    - "gaze_residual_mean"
-    - "gaze_residual_std"
-    - "predictability_residual_slope"
-    - "length_residual_slope"
-    - "gaze_ms_mean"
+    - "lm_surprisal_exposure_mean"
+    - "lm_surprisal_exposure_std"
+    - "lm_entropy_exposure_mean"
+    - "lm_entropy_exposure_std"
+    - "residual_mean__gaze_log_ms"
+    - "residual_std__gaze_log_ms"
+    - "sensitivity__gaze_log_ms__surprisal"
+    - "sensitivity__gaze_log_ms__entropy"
 model:
-  alpha: 1.0
+  family: "logistic_regression"
   threshold: 0.5

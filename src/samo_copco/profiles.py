@@ -1,54 +1,52 @@
-"""Reader-profile aggregation for SAMO."""
+"""SAMO reader-profile aggregation."""
 
 from __future__ import annotations
 
-import numpy as np
 import pandas as pd
 
-from .data_contracts import GAZE_MS, LABEL, PREDICTABILITY, READER_ID, WORD_LENGTH
+from .data_contracts import GAZE_MS, LABEL, PREDICTABILITY, READER_ID
 
 
-def _slope(frame: pd.DataFrame, x_col: str, y_col: str) -> float:
-    x = pd.to_numeric(frame[x_col], errors="coerce").to_numpy(dtype=float)
-    y = pd.to_numeric(frame[y_col], errors="coerce").to_numpy(dtype=float)
-    mask = ~(np.isnan(x) | np.isnan(y))
-    if mask.sum() < 2:
-        return 0.0
-    x = x[mask]
-    y = y[mask]
-    centered = x - x.mean()
-    denom = float(np.dot(centered, centered))
-    if denom == 0.0:
-        return 0.0
-    return float(np.dot(centered, y - y.mean()) / denom)
+def _std(values: pd.Series) -> float:
+    return float(values.std(ddof=0)) if len(values) > 1 else 0.0
 
 
-def build_reader_profiles(frame: pd.DataFrame, *, residual_column: str = "gaze_residual") -> pd.DataFrame:
-    required = {READER_ID, GAZE_MS, PREDICTABILITY, WORD_LENGTH, residual_column}
-    missing = sorted(required - set(frame.columns))
-    if missing:
-        raise ValueError("missing profile columns: " + ", ".join(missing))
+def build_reader_profiles(frame: pd.DataFrame, *, reader_column: str = READER_ID) -> pd.DataFrame:
+    """Build one residualized LM exposure/sensitivity profile per reader."""
+
+    if reader_column not in frame.columns:
+        raise ValueError(f"missing reader column: {reader_column}")
+    residual_columns = [column for column in frame.columns if column.startswith("resid__")]
+    if not residual_columns and "gaze_residual" in frame.columns:
+        residual_columns = ["gaze_residual"]
     rows: list[dict[str, float | int | str]] = []
-    for reader_id, group in frame.groupby(READER_ID, sort=True):
-        residual = pd.to_numeric(group[residual_column], errors="coerce")
-        gaze = pd.to_numeric(group[GAZE_MS], errors="coerce")
-        predictability = pd.to_numeric(group[PREDICTABILITY], errors="coerce")
-        row: dict[str, float | int | str] = {
-            READER_ID: str(reader_id),
-            "n_words": int(len(group)),
-            "gaze_residual_mean": float(residual.mean()),
-            "gaze_residual_std": float(residual.std(ddof=0)) if len(group) > 1 else 0.0,
-            "predictability_residual_slope": _slope(group, PREDICTABILITY, residual_column),
-            "length_residual_slope": _slope(group, WORD_LENGTH, residual_column),
-            "gaze_ms_mean": float(gaze.mean()),
-            "predictability_mean": float(predictability.mean()),
-            "predictability_std": float(predictability.std(ddof=0)) if len(group) > 1 else 0.0,
-        }
+    for reader, group in frame.groupby(reader_column, sort=True):
+        row: dict[str, float | int | str] = {READER_ID: str(reader), "n_words": int(len(group))}
         if LABEL in group.columns:
-            unique_labels = sorted(set(pd.to_numeric(group[LABEL], errors="coerce").dropna().astype(int).tolist()))
-            if len(unique_labels) != 1:
-                raise ValueError(f"reader {reader_id} has inconsistent labels")
-            row[LABEL] = int(unique_labels[0])
+            labels = sorted(set(pd.to_numeric(group[LABEL], errors="coerce").dropna().astype(int).tolist()))
+            if len(labels) != 1:
+                raise ValueError(f"reader {reader} has inconsistent labels")
+            row[LABEL] = int(labels[0])
+        if GAZE_MS in group.columns:
+            row["gaze_ms_mean"] = float(pd.to_numeric(group[GAZE_MS], errors="coerce").mean())
+        if {"lm_word_surprisal", "lm_word_entropy"} <= set(group.columns):
+            surprisal = pd.to_numeric(group["lm_word_surprisal"], errors="coerce")
+            entropy = pd.to_numeric(group["lm_word_entropy"], errors="coerce")
+            row["lm_surprisal_exposure_mean"] = float(surprisal.mean())
+            row["lm_surprisal_exposure_std"] = _std(surprisal)
+            row["lm_entropy_exposure_mean"] = float(entropy.mean())
+            row["lm_entropy_exposure_std"] = _std(entropy)
+            for residual_column in residual_columns:
+                residual = pd.to_numeric(group[residual_column], errors="coerce")
+                clean_name = residual_column.removeprefix("resid__")
+                row[f"residual_mean__{clean_name}"] = float(residual.mean())
+                row[f"residual_std__{clean_name}"] = _std(residual)
+                row[f"sensitivity__{clean_name}__surprisal"] = float((residual * surprisal).mean())
+                row[f"sensitivity__{clean_name}__entropy"] = float((residual * entropy).mean())
+        if PREDICTABILITY in group.columns:
+            pred = pd.to_numeric(group[PREDICTABILITY], errors="coerce")
+            row["predictability_mean"] = float(pred.mean())
+            row["predictability_std"] = _std(pred)
         rows.append(row)
     profiles = pd.DataFrame(rows).sort_values(READER_ID).reset_index(drop=True)
     if profiles[READER_ID].duplicated().any():

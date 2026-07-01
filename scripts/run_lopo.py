@@ -6,4 +6,4 @@ from samo_copco.cli import main
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(["run-lopo", *sys.argv[1:]]))
+    raise SystemExit(main(["evaluate-lopo", *sys.argv[1:]]))

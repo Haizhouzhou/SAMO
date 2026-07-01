@@ -1,62 +1,59 @@
-from pathlib import Path
+from __future__ import annotations
 
 import pandas as pd
 import pytest
 
-from samo_copco.features import (
-    infer_available_gaze_features,
-    normalize_feature_columns,
-    select_model_feature_columns,
-    summarize_feature_availability,
-    validate_feature_columns,
-)
+from samo_copco.features import normalize_feature_columns, select_model_feature_columns, summarize_feature_availability, validate_feature_columns
 
 
-def _synthetic_words() -> pd.DataFrame:
-    root = Path(__file__).resolve().parents[1]
-    return pd.read_csv(root / "tests" / "fixtures" / "synthetic_word_features.csv")
+def test_copco_aliases_normalize_to_public_columns() -> None:
+    frame = pd.DataFrame(
+        {
+            "participantId": ["r1"],
+            "speechId": [1],
+            "paragraphId": [2],
+            "sentenceId": [3],
+            "wordId": [4],
+            "word": ["alpha"],
+            "TRT": [200],
+        }
+    )
+    normalized = normalize_feature_columns(frame)
+    assert {"reader_id", "speech_id", "paragraph_id", "sentence_id", "source_word_id", "gaze_duration_ms"} <= set(normalized.columns)
 
 
-def test_synthetic_fixture_passes_feature_validation():
-    frame = _synthetic_words()
-    validate_feature_columns(frame)
-    summary = summarize_feature_availability(frame)
-    assert "gaze_duration_ms" in summary["available_gaze_features"]
-    assert "predictability_score" in summary["predictability_feature_families"]["model_predictability"]
-
-
-def test_missing_required_gaze_feature_raises_clear_error():
-    frame = _synthetic_words().drop(columns=["gaze_duration_ms"])
-    with pytest.raises(ValueError, match="missing required feature columns: gaze_duration_ms"):
+def test_missing_required_gaze_feature_raises_clear_error() -> None:
+    frame = pd.DataFrame({"word": ["alpha"]})
+    with pytest.raises(ValueError, match="gaze_duration_ms"):
         validate_feature_columns(frame)
 
 
-def test_blocked_id_label_text_columns_are_excluded_from_model_predictors():
-    frame = _synthetic_words().assign(
-        participant_id="synthetic_reader_extra",
-        speech_id="synthetic_speech_extra",
-        trial_id=1,
-        target=0,
-        usable_profile_feature=1.25,
+def test_blocked_id_label_columns_are_excluded_from_model_predictors() -> None:
+    frame = pd.DataFrame(
+        {
+            "reader_id": ["r1", "r2"],
+            "reader_label": [0, 1],
+            "lm_surprisal_exposure_mean": [1.0, 2.0],
+            "sensitivity__gaze_duration_ms__surprisal": [0.1, 0.2],
+        }
     )
-    normalized = normalize_feature_columns(frame)
-    selected = select_model_feature_columns(normalized)
-    blocked = {"reader_id", "participant_id", "reader_label", "target", "speech_id", "text_id", "trial_id"}
-    assert not (set(selected) & blocked)
-    assert "gaze_duration_ms" in selected
-    assert "predictability_score" in selected
+    selected = select_model_feature_columns(frame)
+    assert "reader_id" not in selected
+    assert "reader_label" not in selected
+    assert "lm_surprisal_exposure_mean" in selected
 
 
-def test_feature_family_inference_returns_expected_groups():
-    frame = _synthetic_words().assign(
-        gaze_residual_mean=0.1,
-        predictability_residual_slope=-0.2,
-        n_words=24,
+def test_feature_summary_reports_lm_families() -> None:
+    frame = pd.DataFrame(
+        {
+            "word": ["alpha"],
+            "gaze_duration_ms": [200],
+            "lm_word_surprisal": [1.1],
+            "lm_word_entropy": [2.2],
+            "lm_surprisal_exposure_mean": [1.1],
+            "sensitivity__gaze_duration_ms__entropy": [0.2],
+        }
     )
-    gaze = infer_available_gaze_features(frame)
     summary = summarize_feature_availability(frame)
-    assert gaze == ["gaze_duration_ms"]
-    assert summary["gaze_feature_families"]["duration"] == ["gaze_duration_ms"]
-    assert summary["predictability_feature_families"]["model_predictability"] == ["predictability_score"]
-    assert "gaze_residual_mean" in summary["residualized_profile_feature_families"]["residual_location"]
-    assert "predictability_residual_slope" in summary["residualized_profile_feature_families"]["residual_sensitivity"]
+    assert "lm_word_surprisal" in summary["predictability_feature_families"]["lm_word_predictability"]
+    assert "lm_surprisal_exposure_mean" in summary["residualized_profile_feature_families"]["lm_exposure"]

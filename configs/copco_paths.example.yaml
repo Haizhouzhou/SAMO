@@ -1,16 +1,20 @@
-# Example only. Replace these with local files obtained through the appropriate CopCo access route.
+# Example only. Replace these paths with local CopCo-derived tables.
 paths:
   word_features: "PATH_TO_LOCAL_WORD_FEATURES.csv"
   labels: "PATH_TO_LOCAL_READER_LABELS.csv"
+  lm_features: "PATH_TO_LOCAL_LM_FEATURES.csv"
   output_dir: "PATH_TO_LOCAL_OUTPUT_DIRECTORY"
 columns:
   reader_id: "reader_id"
-  text_id: "text_id"
-  word_id: "word_id"
+  speech_id: "speech_id"
+  paragraph_id: "paragraph_id"
+  sentence_id: "sentence_id"
+  source_word_id: "source_word_id"
   word: "word"
   gaze_duration_ms: "gaze_duration_ms"
   reader_label: "reader_label"
-  predictability_score: "predictability_score"
+  lm_word_surprisal: "lm_word_surprisal"
+  lm_word_entropy: "lm_word_entropy"
 validation:
   require_reader_level_labels: true
   require_reader_disjoint_evaluation: true

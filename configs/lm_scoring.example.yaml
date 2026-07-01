@@ -1,0 +1,19 @@
+# Public-safe example for paper-faithful SAMO LM scoring.
+# Generated LM feature payloads are intentionally not redistributed.
+
+language_models:
+  dry_run: true
+  dtype: float16
+  context_mode: paragraph
+  primary_surprisal:
+    model_id: danish-foundation-models/dfm-decoder-open-v0-7b-pt
+    tokenizer_id: danish-foundation-models/dfm-decoder-open-v0-7b-pt
+    output_label: dfm_decoder_7b
+    role: base_causal_lm_surprisal_entropy
+
+scoring:
+  input_words: PATH_TO_LOCAL_WORD_TABLE.csv
+  output_dir: PATH_TO_LOCAL_OUTPUT_DIR
+  require_gpu: true
+  shard_id: 0
+  num_shards: 1

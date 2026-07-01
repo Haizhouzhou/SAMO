@@ -1,0 +1,5 @@
+speechId,paragraphId,sentenceId,wordId,word,word_position
+100,0,0,0,Alpha,1
+100,0,0,1,beta,2
+100,1,0,0,Gamma,1
+100,1,0,1,delta,2

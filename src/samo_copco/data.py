@@ -9,8 +9,10 @@ from typing import Any
 import pandas as pd
 import yaml
 
-from .data_contracts import GAZE_LOG, GAZE_MS, LABEL, READER_ID, WORD, validate_labels, validate_word_features
-from .predictability import add_predictability_columns
+from .data_contracts import GAZE_LOG, GAZE_MS, LABEL, READER_ID, WORD, WORD_LENGTH, validate_labels, validate_word_features
+from .features import normalize_feature_columns
+from .predictability import add_synthetic_proxy_predictability, validate_predictability_columns
+from .stimulus_reconstruction import make_lm_stable_word_id, normalize_copco_columns
 
 
 def load_config(path: str | Path) -> dict[str, Any]:
@@ -50,22 +52,36 @@ def write_table(frame: pd.DataFrame, path: str | Path) -> None:
     raise ValueError("public writer supports .csv and .tsv outputs")
 
 
-def normalize_columns(frame: pd.DataFrame, mapping: dict[str, str] | None) -> pd.DataFrame:
-    if not mapping:
-        return frame.copy()
-    reverse = {source: public for public, source in mapping.items() if source in frame.columns}
-    return frame.rename(columns=reverse).copy()
+def normalize_columns(frame: pd.DataFrame, mapping: dict[str, str] | None = None) -> pd.DataFrame:
+    out = normalize_copco_columns(frame) if WORD in set(frame.columns) or "word_form" in set(frame.columns) else normalize_feature_columns(frame)
+    if mapping:
+        reverse = {source: public for public, source in mapping.items() if source in out.columns}
+        out = out.rename(columns=reverse).copy()
+    return out
 
 
-def prepare_word_table(word_features: pd.DataFrame, labels: pd.DataFrame | None = None) -> pd.DataFrame:
-    out = word_features.copy()
+def prepare_word_table(
+    word_features: pd.DataFrame,
+    labels: pd.DataFrame | None = None,
+    *,
+    allow_synthetic_proxy: bool = False,
+) -> pd.DataFrame:
+    """Normalize, validate, and enrich repeated word rows."""
+
+    out = make_lm_stable_word_id(word_features)
     if labels is not None and LABEL not in out.columns:
-        label_check = validate_labels(labels)
-        label_check.raise_for_errors()
-        out = out.merge(labels[[READER_ID, LABEL]], on=READER_ID, how="left", validate="many_to_one")
-    require_label = LABEL in out.columns
-    validate_word_features(out, require_label=require_label).raise_for_errors()
-    out = add_predictability_columns(out)
+        labels_norm = normalize_copco_columns(labels)
+        validate_labels(labels_norm).raise_for_errors()
+        out = out.merge(labels_norm[[READER_ID, LABEL]], on=READER_ID, how="left", validate="many_to_one")
+    if WORD_LENGTH not in out.columns:
+        out[WORD_LENGTH] = out[WORD].astype(str).str.len().astype(float)
+    validate_word_features(out, require_label=LABEL in out.columns).raise_for_errors()
+    if {"lm_word_surprisal", "lm_word_entropy"} <= set(out.columns):
+        validate_predictability_columns(out)
+    elif "predictability_score" in out.columns:
+        validate_predictability_columns(out, allow_synthetic_score=True)
+    elif allow_synthetic_proxy:
+        out = add_synthetic_proxy_predictability(out)
     gaze = pd.to_numeric(out[GAZE_MS], errors="coerce")
     if gaze.isna().any():
         raise ValueError(f"{GAZE_MS} contains non-numeric values")
@@ -89,4 +105,4 @@ def load_configured_inputs(config: dict[str, Any]) -> tuple[pd.DataFrame, pd.Dat
 
 def synthetic_fixture_paths(repo_root: Path) -> tuple[Path, Path]:
     fixture_dir = repo_root / "tests" / "fixtures"
-    return fixture_dir / "synthetic_word_features.csv", fixture_dir / "synthetic_labels.csv"
+    return fixture_dir / "repeated_participant_word_rows.csv", fixture_dir / "synthetic_labels.csv"

@@ -1,11 +1,11 @@
 cff-version: 1.2.0
-title: "SAMO for CopCo reader-profile modeling"
-message: "If you use this release candidate, cite the repository and the CopCo data source separately."
+title: "SAMO: residualized predictability-sensitive reader profiles for CopCo"
+message: "If you use this code, cite the SAMO repository and the CopCo data source separately."
 type: software
 authors:
   - name: "SAMO contributors"
-version: "0.1.0"
-date-released: "2026-06-28"
+version: "1.0.0"
+date-released: "2026-07-01"
 license: "MIT"
-repository-code: "https://example.invalid/samo-copco"
-abstract: "Public release candidate for residualized predictability-sensitive reader-profile modeling for CopCo reader-level classification."
+repository-code: "https://github.com/Haizhouzhou/SAMO"
+abstract: "Code for residualized language-model predictability-sensitive reader-profile modeling for CopCo reader-level classification."
